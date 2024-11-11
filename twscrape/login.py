@@ -5,7 +5,7 @@ from typing import Any
 
 import pyotp
 from httpx import AsyncClient, Response
-from .login_models import LoginConfig, TaskCtx
+from .models import LoginConfig
 
 from .account import Account
 from .imap import imap_get_email_code, imap_login
@@ -14,6 +14,13 @@ from .utils import utc
 
 LOGIN_URL = "https://api.x.com/1.1/onboarding/task.json"
 
+@dataclass
+class TaskCtx:
+    client: AsyncClient
+    acc: Account
+    cfg: LoginConfig
+    prev: Any
+    imap: None | imaplib.IMAP4_SSL
 
 async def get_guest_token(client: AsyncClient):
     rep = await client.post("https://api.x.com/1.1/guest/activate.json")

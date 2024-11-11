@@ -15,6 +15,14 @@ import httpx
 from .logger import logger
 from .utils import find_item, get_or, int_or, to_old_rep, utc
 
+@dataclass
+class LoginConfig:
+    email_first: bool = False
+    manual: bool = False
+    imap_proxy_host: str = None
+    imap_proxy_port: int = None
+    imap_proxy_user: str = None
+    imap_proxy_pass: str = None
 
 @dataclass
 class JSONTrait:

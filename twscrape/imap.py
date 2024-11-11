@@ -5,7 +5,7 @@ import os
 import time
 from datetime import datetime
 
-from .login_models import LoginConfig
+from .models import LoginConfig
 
 from .logger import logger
 
