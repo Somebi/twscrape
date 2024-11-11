@@ -15,6 +15,8 @@ import httpx
 from .logger import logger
 from .utils import find_item, get_or, int_or, to_old_rep, utc
 
+__all__ = ["LoginConfig"]
+
 @dataclass
 class LoginConfig:
     email_first: bool = False
