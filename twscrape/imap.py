@@ -5,7 +5,57 @@ import os
 import time
 from datetime import datetime
 
+from twscrape.login import LoginConfig
+
 from .logger import logger
+
+import socket
+import ssl
+
+def create_http_tunnel(proxy_host, proxy_port, target_host, target_port, proxy_user=None, proxy_pass=None):
+    # Create a socket connection to the proxy
+    sock = socket.create_connection((proxy_host, proxy_port))
+    connect_command = f"CONNECT {target_host}:{target_port} HTTP/1.1\r\n"
+
+    # Add proxy authentication if provided
+    if proxy_user and proxy_pass:
+        import base64
+        credentials = f"{proxy_user}:{proxy_pass}"
+        encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+        connect_command += f"Proxy-Authorization: Basic {encoded_credentials}\r\n"
+
+    connect_command += "\r\n"
+
+    # Send the CONNECT request to the proxy
+    sock.sendall(connect_command.encode('utf-8'))
+
+    # Read the response from the proxy
+    response = sock.recv(4096).decode('utf-8')
+    if "200 Connection established" not in response:
+        sock.close()
+        raise Exception(f"Failed to establish a tunnel: {response}")
+
+    return sock
+
+class IMAP4_SSL_HTTP_Proxy(imaplib.IMAP4_SSL):
+    def __init__(self, host, port=imaplib.IMAP4_SSL_PORT, proxy_host=None, proxy_port=None, proxy_user=None, proxy_pass=None, ssl_context=None):
+        self.proxy_host = proxy_host
+        self.proxy_port = proxy_port
+        self.proxy_user = proxy_user
+        self.proxy_pass = proxy_pass
+        self.ssl_context = ssl_context
+        super().__init__(host, port)
+
+    def open(self, host='', port=imaplib.IMAP4_SSL_PORT):
+        self.host = host
+        self.port = port
+        raw_sock = create_http_tunnel(
+            self.proxy_host, self.proxy_port, self.host, self.port, self.proxy_user, self.proxy_pass
+        )
+        if self.ssl_context is None:
+            self.ssl_context = ssl.create_default_context()
+        self.sock = self.ssl_context.wrap_socket(raw_sock, server_hostname=self.host)
+        self.file = self.sock.makefile('rb')
 
 
 def env_int(key: str | list[str], default: int) -> int:
@@ -97,9 +147,25 @@ async def imap_get_email_code(
         raise e
 
 
-async def imap_login(email: str, password: str):
+async def imap_login(email: str, password: str, cfg: LoginConfig):
     domain = _get_imap_domain(email)
-    imap = imaplib.IMAP4_SSL(domain)
+
+    if not cfg.imap_proxy_host:
+        imap = imaplib.IMAP4_SSL(domain)
+    else:
+        assert cfg.imap_proxy_host, "imap_proxy_host is required in LoginConfig"
+        assert cfg.imap_proxy_port, "imap_proxy_port is required in LoginConfig"
+        assert cfg.imap_proxy_user, "imap_proxy_user is required in LoginConfig"
+        assert cfg.imap_proxy_pass, "imap_proxy_pass is required in LoginConfig"
+
+        imap = IMAP4_SSL_HTTP_Proxy(
+            host=domain,
+            port=993,
+            proxy_host=cfg.imap_proxy_host,
+            proxy_port=cfg.imap_proxy_port,
+            proxy_user=cfg.imap_proxy_user,
+            proxy_pass=cfg.imap_proxy_pass
+        )
 
     try:
         imap.login(email, password)

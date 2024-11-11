@@ -18,7 +18,10 @@ LOGIN_URL = "https://api.x.com/1.1/onboarding/task.json"
 class LoginConfig:
     email_first: bool = False
     manual: bool = False
-
+    imap_proxy_host: str = None
+    imap_proxy_port: int = None
+    imap_proxy_user: str = None
+    imap_proxy_pass: str = None
 
 @dataclass
 class TaskCtx:
@@ -179,7 +182,7 @@ async def login_confirm_email_code(ctx: TaskCtx):
         value = value.strip()
     else:
         if not ctx.imap:
-            ctx.imap = await imap_login(ctx.acc.email, ctx.acc.email_password)
+            ctx.imap = await imap_login(ctx.acc.email, ctx.acc.email_password, ctx.cfg)
 
         now_time = utc.now() - timedelta(seconds=30)
         value = await imap_get_email_code(ctx.imap, ctx.acc.email, now_time)
@@ -256,7 +259,7 @@ async def login(acc: Account, cfg: LoginConfig | None = None) -> Account:
 
     cfg, imap = cfg or LoginConfig(), None
     if cfg.email_first and not cfg.manual:
-        imap = await imap_login(acc.email, acc.email_password)
+        imap = await imap_login(acc.email, acc.email_password, cfg)
 
     async with acc.make_client() as client:
         guest_token = await get_guest_token(client)
