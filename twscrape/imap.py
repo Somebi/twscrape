@@ -5,7 +5,7 @@ import os
 import time
 from datetime import datetime
 
-from twscrape.login import LoginConfig
+from .login_models import LoginConfig
 
 from .logger import logger
 
