@@ -46,7 +46,7 @@ class IMAP4_SSL_HTTP_Proxy(imaplib.IMAP4_SSL):
         self.ssl_context = ssl_context
         super().__init__(host, port)
 
-    def open(self, host='', port=imaplib.IMAP4_SSL_PORT):
+    def open(self, host='', port=imaplib.IMAP4_SSL_PORT, timeout=None):
         self.host = host
         self.port = port
         raw_sock = create_http_tunnel(
