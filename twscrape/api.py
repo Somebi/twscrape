@@ -84,6 +84,7 @@ class API:
 
         self.proxy = proxy
         self.debug = debug
+        self.last_used_client = None
         if self.debug:
             set_log_level("DEBUG")
 
@@ -113,6 +114,7 @@ class API:
         kv, ft = {**kv}, {**GQL_FEATURES, **(ft or {})}
 
         async with QueueClient(self.pool, queue, self.debug, proxy=self.proxy) as client:
+            self.last_used_client = client
             while active:
                 params = {"variables": kv, "features": ft}
                 if cur is not None:
@@ -148,6 +150,7 @@ class API:
         ft = ft or {}
         queue = op.split("/")[-1]
         async with QueueClient(self.pool, queue, self.debug, proxy=self.proxy) as client:
+            self.last_used_client = client
             params = {"variables": {**kv}, "features": {**GQL_FEATURES, **ft}}
             return await client.get(f"{GQL_URL}/{op}", params=encode_params(params))
 
@@ -504,3 +507,7 @@ class API:
             async for rep in gen:
                 for x in parse_tweets(rep.json(), limit):
                     yield x
+
+    def get_last_used_client(self) -> QueueClient | None:
+        """Returns the last QueueClient instance used for API requests"""
+        return self.last_used_client
