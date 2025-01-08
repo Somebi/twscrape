@@ -8,6 +8,7 @@ from .logger import set_log_level
 from .models import Tweet, User, parse_tweet, parse_tweets, parse_user, parse_users
 from .queue_client import QueueClient
 from .utils import encode_params, find_obj, get_by_path
+from .account import Account
 
 # OP_{NAME} – {NAME} should be same as second part of GQL ID (required to auto-update script)
 OP_SearchTimeline = "jiR2G5DAUAraqAYpcg9O-g/SearchTimeline"
@@ -84,7 +85,7 @@ class API:
 
         self.proxy = proxy
         self.debug = debug
-        self.last_used_client = None
+        self._last_used_account = None
         if self.debug:
             set_log_level("DEBUG")
 
@@ -114,7 +115,7 @@ class API:
         kv, ft = {**kv}, {**GQL_FEATURES, **(ft or {})}
 
         async with QueueClient(self.pool, queue, self.debug, proxy=self.proxy) as client:
-            self.last_used_client = client
+            self.last_used_account = getattr(getattr(client, 'ctx', None), 'acc', None)
             while active:
                 params = {"variables": kv, "features": ft}
                 if cur is not None:
@@ -150,7 +151,7 @@ class API:
         ft = ft or {}
         queue = op.split("/")[-1]
         async with QueueClient(self.pool, queue, self.debug, proxy=self.proxy) as client:
-            self.last_used_client = client
+            self.last_used_account = getattr(getattr(client, 'ctx', None), 'acc', None)
             params = {"variables": {**kv}, "features": {**GQL_FEATURES, **ft}}
             return await client.get(f"{GQL_URL}/{op}", params=encode_params(params))
 
@@ -508,6 +509,11 @@ class API:
                 for x in parse_tweets(rep.json(), limit):
                     yield x
 
-    def get_last_used_client(self) -> QueueClient | None:
-        """Returns the last QueueClient instance used for API requests"""
-        return self.last_used_client
+    @property
+    def last_used_account(self) -> Account | None:
+        """Returns the last Twitter account used for an API request"""
+        return self._last_used_account
+
+    @last_used_account.setter
+    def last_used_account(self, value):
+        self._last_used_account = value
