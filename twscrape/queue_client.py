@@ -150,21 +150,26 @@ class QueueClient:
         # no way to check is account banned in direct way, but this check should work
         if err_msg.startswith("(88) Rate limit exceeded") and limit_remaining > 0:
             logger.warning(f"Ban detected: {log_msg}")
-            await self._close_ctx(-1, inactive=True, msg=err_msg)
+            print(f"[Account {self.ctx.acc.username}] Rate-limit detected: {log_msg}")
+            # await self._close_ctx(-1, inactive=True, msg=err_msg)
+            await self._close_ctx(utc.ts() + 60 * 15)  # 15 minutes
             raise HandledError()
 
         if err_msg.startswith("(326) Authorization: Denied by access control"):
             logger.warning(f"Ban detected: {log_msg}")
+            print(f"[Account {self.ctx.acc.username}] Authorization denied: {log_msg}")
             await self._close_ctx(-1, inactive=True, msg=err_msg)
             raise HandledError()
 
         if err_msg.startswith("(32) Could not authenticate you"):
             logger.warning(f"Session expired or banned: {log_msg}")
+            print(f"[Account {self.ctx.acc.username}] Could not authenticate: {log_msg}")
             await self._close_ctx(-1, inactive=True, msg=err_msg)
             raise HandledError()
 
         if err_msg == "OK" and rep.status_code == 403:
             logger.warning(f"Session expired or banned: {log_msg}")
+            print(f"[Account {self.ctx.acc.username}] Session expired: {log_msg}")
             await self._close_ctx(-1, inactive=True, msg=None)
             raise HandledError()
 
