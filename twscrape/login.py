@@ -181,7 +181,7 @@ async def login_confirm_email_code(ctx: TaskCtx):
         if not ctx.imap:
             ctx.imap = await imap_login(ctx.acc.email, ctx.acc.email_password)
 
-        now_time = utc.now() - timedelta(seconds=30)
+        now_time = utc.now() - timedelta(minutes=10)
         value = await imap_get_email_code(ctx.imap, ctx.acc.email, now_time)
 
     payload = {

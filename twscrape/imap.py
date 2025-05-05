@@ -15,7 +15,7 @@ def env_int(key: str | list[str], default: int) -> int:
     return val[0] if val else default
 
 
-TWS_WAIT_EMAIL_CODE = env_int(["TWS_WAIT_EMAIL_CODE", "LOGIN_CODE_TIMEOUT"], 30)
+TWS_WAIT_EMAIL_CODE = env_int(["TWS_WAIT_EMAIL_CODE", "LOGIN_CODE_TIMEOUT"], 120)
 
 
 class EmailLoginError(Exception):
